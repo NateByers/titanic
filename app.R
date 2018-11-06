@@ -2,11 +2,14 @@ library(shinydashboard)
 library(dplyr)
 library(ggplot2)
 library(plotly)
-source("global.R")
+
+titanic <- readxl::read_excel("data/titanic3.xls")
+load("data/xgboost.rda")
+
 
 ui <- navbarPage(
   title = "Titanic",
-  tabPanel("Data Explorer", 
+  tabPanel("Dashboard", 
   
   column(6, 
          plotOutput("survived_plot", height = 250),
@@ -16,41 +19,38 @@ ui <- navbarPage(
          plotlyOutput("age_plot", height = 250),
          plotlyOutput("class_plot", height = 250))),
   
-  tabPanel("Ticket Price Prediction"),
+  tabPanel("Raw Data",
+           DT::dataTableOutput("raw")),
   
-  tabPanel("Survival Prediction")
-  
-  
-  
+  tabPanel("Prediction",
+           sidebarPanel(
+             numericInput("age_input", "Age:", 
+                          median(titanic$age, na.rm = TRUE)),
+             selectInput("sex_input", "Sex:", c("female", "male")),
+             radioButtons("class_input", "Passenger Class:",
+                          c("1st" = 1, "2nd" = 2, "3rd" = 3))
+           ),
+           mainPanel(
+             column(6,
+               plotOutput("survival_probability")
+             ),
+             column(6,
+                    plotOutput("fare_prediction")
+                    )
+           )
+           )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  #dashboard_data <- reactive({
-  #  titanic %>%
-  #    process_dashboard_data(input$survived)
-  #})
-  
   output$age_plot <- renderPlotly({
     data <- titanic %>%
       dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
     p <- ggplot(data, aes(age, fill = survived)) + 
-      geom_histogram() + theme_minimal() + ggtitle("Age Distribution")
+      geom_histogram() + theme_minimal() 
     ggplotly(p)
   })
-  
-  # output$survived_plot <- renderPlotly({
-  #   data <- titanic %>%
-  #     dplyr::mutate(survived_label = ifelse(survived == 0, "No", "Yes"),
-  #                   survived_pie = 1,
-  #                   color = ifelse(survived == 0, "#F8766D", "#00BFC4"))
-  #   plot_ly(data, labels =~survived_label, values = ~survived_pie, type = 'pie',
-  #           color = ~I(color)) %>%
-  #     layout(title = 'Total Survival',
-  #            xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-  #            yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-  # })
   
   output$survived_plot <- renderPlot({
     data <- titanic %>%
@@ -86,6 +86,26 @@ server <- function(input, output) {
       geom_bar(position="dodge") + 
       theme_minimal()
     ggplotly(p)
+  })
+  
+  output$raw <- DT::renderDataTable({
+    titanic
+  })
+  
+  output$survival_probability <- renderPlot({
+    df <- data.frame(pclass = factor(input$class_input, levels = c("1", "2", "3")),
+                     sex = factor(input$sex_input, levels = c("female", "male")),
+                     age = input$age_input)
+    sparse_matrix <- Matrix::sparse.model.matrix(~.-1, data = df)
+    print(colnames(sparse_matrix))
+    prediction <- predict(bst, newdata = sparse_matrix)
+    plot_df <- data.frame(survival = "", probability = prediction)
+    ggplot(plot_df, aes(survival, probability)) + geom_bar(stat = "identity") +
+      expand_limits(y = c(0, 1)) + theme_minimal()
+  })
+  
+  output$fare_prediction <- renderPlot({
+    
   })
   
 }

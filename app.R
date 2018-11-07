@@ -1,14 +1,36 @@
-library(shinydashboard)
+library(shiny)
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(DT)
+
 
 titanic <- readxl::read_excel("data/titanic3.xls")
 load("data/xgboost.rda")
-
+categoricals <- c("pclass", "sex", "sibsp", "parch", "embarked")
 
 ui <- navbarPage(
   title = "Titanic",
+  
+  tabPanel("Data",
+           DT::dataTableOutput("raw")),
+  
+  tabPanel("Data Explorer",
+           sidebarPanel(
+             selectInput("categorical", "Categorical Plot",
+                         categoricals),
+             selectInput("numeric", "Numeric Plot",
+                         c("age", "fare"))
+           ),
+           mainPanel(
+             column(6,
+                    plotOutput("categorical_plot")
+             ),
+             column(6,
+                    plotOutput("numeric_plot")
+             )
+           )),
+  
   tabPanel("Dashboard", 
   
   column(6, 
@@ -19,8 +41,7 @@ ui <- navbarPage(
          plotlyOutput("age_plot", height = 250),
          plotlyOutput("class_plot", height = 250))),
   
-  tabPanel("Raw Data",
-           DT::dataTableOutput("raw")),
+  
   
   tabPanel("Prediction",
            sidebarPanel(
@@ -28,14 +49,18 @@ ui <- navbarPage(
                           median(titanic$age, na.rm = TRUE)),
              selectInput("sex_input", "Sex:", c("female", "male")),
              radioButtons("class_input", "Passenger Class:",
-                          c("1st" = 1, "2nd" = 2, "3rd" = 3))
+                          c("1st" = 1, "2nd" = 2, "3rd" = 3)),
+             sliderInput("fare_input", "Fare:", 
+                         min(titanic$fare, na.rm = TRUE),
+                         round(max(titanic$fare, na.rm = TRUE)),
+                         80, 10)
            ),
            mainPanel(
              column(6,
-               plotOutput("survival_probability")
+               plotOutput("fare_boxplot")
              ),
              column(6,
-                    plotOutput("fare_prediction")
+                    plotOutput("survival_probability")
                     )
            )
            )
@@ -43,6 +68,25 @@ ui <- navbarPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+  output$categorical_plot <- renderPlot({
+    data <- titanic %>%
+      dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
+
+    data[[input$categorical]] <- factor(data[[input$categorical]])
+    p <- ggplot(data, aes_string(input$categorical, fill = "survived")) +
+      geom_bar(position="dodge") +
+      theme_minimal()
+    p
+  })
+  
+  output$numeric_plot <- renderPlot({
+    df <- titanic %>%
+      dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
+    
+    ggplot(df, aes_string("survived", input$numeric, fill = "survived")) +
+      geom_boxplot() 
+  })
   
   output$age_plot <- renderPlotly({
     data <- titanic %>%
@@ -88,24 +132,38 @@ server <- function(input, output) {
     ggplotly(p)
   })
   
-  output$raw <- DT::renderDataTable({
-    titanic
-  })
+  output$raw <- DT::renderDataTable(
+    datatable(titanic %>%
+                dplyr::mutate(pclass = as.character(pclass),
+                              survived = as.character(survived)) %>%
+                dplyr::select(-name, -home.dest, -boat, -body),
+      filter = 'top')
+  )
   
   output$survival_probability <- renderPlot({
     df <- data.frame(pclass = factor(input$class_input, levels = c("1", "2", "3")),
                      sex = factor(input$sex_input, levels = c("female", "male")),
-                     age = input$age_input)
+                     age = input$age_input,
+                     fare = input$fare_input)
     sparse_matrix <- Matrix::sparse.model.matrix(~.-1, data = df)
-    print(colnames(sparse_matrix))
     prediction <- predict(bst, newdata = sparse_matrix)
     plot_df <- data.frame(survival = "", probability = prediction)
     ggplot(plot_df, aes(survival, probability)) + geom_bar(stat = "identity") +
       expand_limits(y = c(0, 1)) + theme_minimal()
   })
   
-  output$fare_prediction <- renderPlot({
+  output$fare_boxplot <- renderPlot({
+    df <- titanic %>%
+      dplyr::filter(pclass == input$class_input,
+                    sex == input$sex_input) %>%
+      dplyr::mutate(x = paste(sex, "\\ Class", pclass))
     
+    x <- factor(unique(df$x))
+    
+    ggplot() +
+      geom_boxplot(data = df, aes(x = x, y= fare)) +
+      geom_point(data = data.frame(x = x, y = input$fare_input),
+                 aes(x=x, y=y), color = 'red', size = 2)
   })
   
 }

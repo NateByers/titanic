@@ -4,12 +4,11 @@ library(dplyr)
 library(Matrix)
 
 titanic <- readxl::read_excel("data/titanic3.xls") %>%
-  dplyr::select(survived, pclass, sex, age, sibsp, fare, embarked) %>%
+  dplyr::select(survived, pclass, sex, age, sibsp, fare) %>%
   dplyr::mutate(pclass = factor(pclass),
                 sex = factor(sex),
                 sibsp = ifelse(sibsp == 0, 0, 1),
-                sibsp = factor(sibsp),
-                embarked = factor(embarked)) %>%
+                sibsp = factor(sibsp)) %>%
   as.data.frame()
 
 titanic <- titanic[complete.cases(titanic), ]
@@ -19,12 +18,10 @@ titanic_train <- titanic[train_rows,]
 titanic_test <- titanic[-train_rows,]
 
 titanic_train_sparse <- sparse.model.matrix(survived ~ .-1, 
-                                            data = titanic_train# %>%
-                                              #select(-fare)
+                                            data = titanic_train
                                             )
 titanic_test_sparse <- sparse.model.matrix(survived ~ .-1, 
-                                           data = titanic_test# %>%
-                                             #select(-fare)
+                                           data = titanic_test
                                            )
 
 bst <- xgboost(data = titanic_train_sparse, label = titanic_train$survived,
@@ -40,7 +37,3 @@ confusionMatrix(factor(round(test_pred)),
 save(bst, file = "data/xgboost.rda")
 
 
-
-
-lm_model <- lm(fare ~ pclass + sex + age, data = titanic_test)
-summary(lm_model)

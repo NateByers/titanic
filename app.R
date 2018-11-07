@@ -50,6 +50,8 @@ ui <- navbarPage(
              selectInput("sex_input", "Sex:", c("female", "male")),
              radioButtons("class_input", "Passenger Class:",
                           c("1st" = 1, "2nd" = 2, "3rd" = 3)),
+             radioButtons("sibsp_input", "Sibling or Spouse:",
+                          c("Yes" = 1, "No" = 0)),
              sliderInput("fare_input", "Fare:", 
                          min(titanic$fare, na.rm = TRUE),
                          round(max(titanic$fare, na.rm = TRUE)),
@@ -144,7 +146,9 @@ server <- function(input, output) {
     df <- data.frame(pclass = factor(input$class_input, levels = c("1", "2", "3")),
                      sex = factor(input$sex_input, levels = c("female", "male")),
                      age = input$age_input,
+                     sibsp = factor(input$sibsp_input, levels = c("0", "1")),
                      fare = input$fare_input)
+    print(df)
     sparse_matrix <- Matrix::sparse.model.matrix(~.-1, data = df)
     prediction <- predict(bst, newdata = sparse_matrix)
     plot_df <- data.frame(survival = "", probability = prediction)

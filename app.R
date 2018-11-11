@@ -12,6 +12,12 @@ categoricals <- c("pclass", "sex", "sibsp", "parch", "embarked")
 ui <- navbarPage(
   title = "Titanic",
   
+  tabPanel("Overview",
+           column(9,
+                  includeHTML("overview.html"),
+                  offset = 1)
+           ),
+
   tabPanel("Data",
            DT::dataTableOutput("raw")),
   

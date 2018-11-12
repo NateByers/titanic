@@ -124,14 +124,14 @@ server <- function(input, output) {
     # p <- ggplot(data, aes(age, fill = survived)) + 
     #   geom_histogram() + theme_minimal() 
     p <- ggplot(data, aes(age, fill = survived)) + facet_wrap(survived~.) +
-      geom_histogram() + theme_minimal() 
+      geom_histogram() + theme_minimal()# + ggtitle("Survival by Age")
     ggplotly(p)
   })
   
   output$survived_plot <- renderPlot({
     data <- titanic %>%
       dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
-    
+
     p <- ggplot(data, aes(x=factor(1), fill = survived))+
       geom_bar(width = 1) + coord_polar(theta = "y") + theme_minimal()+
       theme(
@@ -142,16 +142,24 @@ server <- function(input, output) {
         axis.ticks = element_blank(),
         plot.title=element_text(size=14, face="bold"),
         axis.text.y=element_blank()
-      )
+      ) #+ ggtitle("Survival Totals")
     p
   })
+  
+  # output$survived_plot <- renderPlotly({
+  #     data <- titanic %>%
+  #       dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
+  #   p <- ggplot(data, aes(survived, fill = survived)) +
+  #     geom_bar(stat = "count") + theme_minimal() + ggtitle("Survival Totals")
+  #   ggplotly(p)
+  # })
   
   output$gender_plot <- renderPlotly({
     data <- titanic %>%
       dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
     p <- ggplot(data, aes(sex, fill = survived)) + 
       geom_bar(position="dodge") + 
-      theme_minimal()
+      theme_minimal() #+ ggtitle("Survival by Sex")
     ggplotly(p)
   })
   
@@ -160,7 +168,7 @@ server <- function(input, output) {
       dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
     p <- ggplot(data, aes(pclass, fill = survived)) + 
       geom_bar(position="dodge") + 
-      theme_minimal()
+      theme_minimal() #+ ggtitle("Survival by Class")
     ggplotly(p)
   })
   

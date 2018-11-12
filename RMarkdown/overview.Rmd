@@ -3,25 +3,25 @@ output: html_fragment
 ---
 
 
-+---------------------------------------------------------+-+----------------------+
-| The RMS Titanic sank on April 15, 1912. There were over | | ![](../img/Titanic.jpg) |
-| 2,200 passengers onboard and about 1,500 died. This     | |                      |
-| site includes a data set with some information about    | |                      |
-| 1,309 of those passengers. Each tab provides a tool for | |                      |
-| visualizing the data set with the goal of understanding | |                      |
-| survival.                                               | |                      |
-|                                                         | |                      |
-|- The __Data__ tab provides the dataset in tabular form. | |                      |
-|                                                         | |                      |
-|- The __Data Explorer__ tab allows the user to visualize | |                      |
-|  survival among the passengers conditioned by           | |                      |
-|  categorical and numeric variables.                     | |                      |
-|                                                         | |                      |
-|- The __Dashboard__ tab is a static overview of some     | |                      |
-|  key variables for understanding survival.              | |                      |
-|                                                         | |                      |
-|- The __Prediction__ lets the user choose characteristics| |                      |
-|  of a single passenger and see how what the probability | |                      |
-|  of survival is, based on a machine learning algorithm. | |                      |
-+---------------------------------------------------------+-+----------------------+
++---------------------------------------------------------+-+-----------------------+
+| The RMS Titanic sank on April 15, 1912. There were over | |![](../img/Titanic.jpg)|
+| 2,200 passengers onboard and about 1,500 died. This     | |                       |
+| site includes a data set with some information about    | |                       |
+| 1,309 of those passengers. Each tab provides a tool for | |                       |
+| visualizing the data set with the goal of understanding | |                       |
+| survival.                                               | |                       |
+|                                                         | |                       |
+|- The __Data__ tab provides the dataset in tabular form. | |                       |
+|                                                         | |                       |
+|- The __Data Explorer__ tab allows the user to visualize | |                       |
+|  survival among the passengers conditioned by           | |                       |
+|  categorical and numeric variables.                     | |                       |
+|                                                         | |                       |
+|- The __Dashboard__ tab is a static overview of some     | |                       |
+|  key variables for understanding survival.              | |                       |
+|                                                         | |                       |
+|- The __Prediction__ lets the user choose characteristics| |                       |
+|  of a single passenger and see what the probability     | |                       |
+|  of survival is, based on a machine learning algorithm. | |                       |
++---------------------------------------------------------+-+-----------------------+
 

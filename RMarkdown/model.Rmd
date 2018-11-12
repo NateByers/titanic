@@ -1,0 +1,25 @@
+---
+title: ''
+output: html_fragment
+---
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(caret)
+load("../data/xgboost.rda")
+```
+
+## Survival Probability Model
+
+The probability of survival displayed in the plot is the output of an XGBoost
+classification model. The model used the following variables to predict 
+survival: pclass, sex, age, sibsp, fare. 
+
+The accuracy and confusion matrix can be seen in the diagnostic output below.
+
+```{r, echo=FALSE}
+confusionMatrix(factor(round(test_pred)), 
+                factor(titanic_test$survived), 
+                mode = "everything")
+```
+
+

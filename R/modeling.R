@@ -12,7 +12,7 @@ titanic <- readxl::read_excel("data/titanic3.xls") %>%
   as.data.frame()
 
 titanic <- titanic[complete.cases(titanic), ]
-
+set.seed(32)
 train_rows<- createDataPartition(y = titanic$survived, p=0.8, list = FALSE)
 titanic_train <- titanic[train_rows,] 
 titanic_test <- titanic[-train_rows,]
@@ -34,6 +34,6 @@ confusionMatrix(factor(round(test_pred)),
                 factor(titanic_test$survived), 
                 mode = "everything")
 
-save(bst, file = "data/xgboost.rda")
+save(bst, test_pred, titanic_test, file = "data/xgboost.rda")
 
 

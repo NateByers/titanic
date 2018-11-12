@@ -8,34 +8,40 @@ library(DT)
 titanic <- readxl::read_excel("data/titanic3.xls")
 load("data/xgboost.rda")
 categoricals <- c("pclass", "sex", "sibsp", "parch", "embarked")
+key <- read.csv("data/key.csv", stringsAsFactors = FALSE)
 
 ui <- navbarPage(
   title = "Titanic",
   
   tabPanel("Overview",
            column(9,
-                  includeHTML("overview.html"),
+                  includeHTML("RMarkdown/overview.html"),
                   offset = 1)
            ),
 
   tabPanel("Data",
-           DT::dataTableOutput("raw")),
+           tabsetPanel(type = "tabs",
+                       tabPanel("DataTable", DT::dataTableOutput("raw")),
+                       tabPanel("Key", tableOutput("key_table"))
+                       )
+           ),
   
   tabPanel("Data Explorer",
-           sidebarPanel(
-             selectInput("categorical", "Categorical Plot",
-                         categoricals),
-             selectInput("numeric", "Numeric Plot",
-                         c("age", "fare"))
+           column(5,
+                  wellPanel(HTML("<b>Categorical Plot</b>"),
+                            HTML("<p>select up to two variables</p>"),
+                            selectInput("categorical", "", categoricals,
+                                        categoricals[1], multiple = TRUE)),
+                  plotOutput("categorical_plot"),
+                  offset = 1),
+           column(5,
+                  wellPanel(HTML("<b>Numeric Plot</b>"),
+                            HTML("<p>select one variable</p>"),
+                            selectInput("numeric", "", c("age", "fare"))),
+                  plotOutput("numeric_plot"),
+                  offset = 1)
+           
            ),
-           mainPanel(
-             column(6,
-                    plotOutput("categorical_plot")
-             ),
-             column(6,
-                    plotOutput("numeric_plot")
-             )
-           )),
   
   tabPanel("Dashboard", 
   
@@ -48,9 +54,8 @@ ui <- navbarPage(
          plotlyOutput("class_plot", height = 250))),
   
   
-  
   tabPanel("Prediction",
-           sidebarPanel(
+           sidebarPanel(HTML("<h4>Select characteristics of a passenger</h4>"),
              numericInput("age_input", "Age:", 
                           median(titanic$age, na.rm = TRUE)),
              selectInput("sex_input", "Sex:", c("female", "male")),
@@ -64,12 +69,20 @@ ui <- navbarPage(
                          80, 10)
            ),
            mainPanel(
-             column(6,
-               plotOutput("fare_boxplot")
-             ),
-             column(6,
-                    plotOutput("survival_probability")
-                    )
+             
+             tabsetPanel(type = "tabs",
+                         tabPanel("Plots", 
+                                  column(6,
+                                         plotOutput("fare_boxplot")
+                                  ),
+                                  column(6,
+                                         plotOutput("survival_probability")
+                                  )
+                                  ),
+                         tabPanel("Model", includeHTML("RMarkdown/model.html"))
+             )
+             
+             
            )
            )
 )
@@ -77,15 +90,24 @@ ui <- navbarPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
+  output$key_table <- renderTable(key)
+  
   output$categorical_plot <- renderPlot({
     data <- titanic %>%
       dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
 
-    data[[input$categorical]] <- factor(data[[input$categorical]])
-    p <- ggplot(data, aes_string(input$categorical, fill = "survived")) +
-      geom_bar(position="dodge") +
-      theme_minimal()
-    p
+    data[[input$categorical[1]]] <- factor(data[[input$categorical[1]]])
+    if(length(input$categorical) > 1) {
+      data[[input$categorical[2]]] <- factor(data[[input$categorical[2]]])
+    }
+    
+    p <- ggplot(data, aes_string(input$categorical[1], fill = "survived")) +
+      geom_bar(position="dodge")
+    if(length(input$categorical) > 1) {
+      p <- p + facet_wrap(input$categorical[2])
+    }
+    
+    p  + theme_minimal()
   })
   
   output$numeric_plot <- renderPlot({
@@ -99,7 +121,9 @@ server <- function(input, output) {
   output$age_plot <- renderPlotly({
     data <- titanic %>%
       dplyr::mutate(survived = factor(survived, 0:1, c("No", "Yes")))
-    p <- ggplot(data, aes(age, fill = survived)) + 
+    # p <- ggplot(data, aes(age, fill = survived)) + 
+    #   geom_histogram() + theme_minimal() 
+    p <- ggplot(data, aes(age, fill = survived)) + facet_wrap(survived~.) +
       geom_histogram() + theme_minimal() 
     ggplotly(p)
   })
@@ -154,26 +178,30 @@ server <- function(input, output) {
                      age = input$age_input,
                      sibsp = factor(input$sibsp_input, levels = c("0", "1")),
                      fare = input$fare_input)
-    print(df)
+
     sparse_matrix <- Matrix::sparse.model.matrix(~.-1, data = df)
     prediction <- predict(bst, newdata = sparse_matrix)
     plot_df <- data.frame(survival = "", probability = prediction)
     ggplot(plot_df, aes(survival, probability)) + geom_bar(stat = "identity") +
-      expand_limits(y = c(0, 1)) + theme_minimal()
+      expand_limits(y = c(0, 1)) + 
+      ggtitle("Probability of Survival") +
+      theme_minimal(base_size = 18)
   })
   
   output$fare_boxplot <- renderPlot({
     df <- titanic %>%
       dplyr::filter(pclass == input$class_input,
                     sex == input$sex_input) %>%
-      dplyr::mutate(x = paste(sex, "\\ Class", pclass))
+      dplyr::mutate(group = paste(sex, "\\ Class", pclass))
     
-    x <- factor(unique(df$x))
+    group <- factor(unique(df$group))
     
     ggplot() +
-      geom_boxplot(data = df, aes(x = x, y= fare)) +
-      geom_point(data = data.frame(x = x, y = input$fare_input),
-                 aes(x=x, y=y), color = 'red', size = 2)
+      geom_boxplot(data = df, aes(x = group, y= fare)) +
+      geom_point(data = data.frame(x = group, y = input$fare_input),
+                 aes(x=x, y=y), color = 'red', size = 2) + 
+      ggtitle("Fare Distribution by Group") +
+      theme_minimal(base_size = 18)
   })
   
 }
